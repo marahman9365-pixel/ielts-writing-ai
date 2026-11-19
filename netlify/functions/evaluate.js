@@ -1,67 +1,283 @@
-exports.handler = async function (event) {
-    if (event.httpMethod !== "POST") {
-        return { statusCode: 405, body: "Method Not Allowed" };
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IELTS Writing AI - হ্যান্ডরাইটিং স্ক্যানার ও বাংলা মূল্যায়ন</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', 'Hind Siliguri', sans-serif; background-color: #f1f5f9; }
+    .bn { font-family: 'Hind Siliguri', sans-serif; }
+  </style>
+</head>
+<body class="text-slate-800 pb-12">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-indigo-900 via-blue-800 to-indigo-800 text-white py-4 px-4 shadow-md sticky top-0 z-30">
+    <div class="max-w-2xl mx-auto flex justify-between items-center">
+      <div>
+        <h1 class="text-lg sm:text-xl font-bold tracking-tight">IELTS Writing AI</h1>
+        <p class="text-xs text-blue-200 bn">হ্যান্ডরাইটিং স্ক্যানার ও বাংলা মূল্যায়ন</p>
+      </div>
+      <span class="bg-white/15 border border-white/20 text-xs font-medium px-3 py-1 rounded-full">AI Examiner</span>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 mt-4 space-y-4">
+
+    <!-- Task Selector & 40-Min Countdown Timer -->
+    <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+      <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+        <button id="btnTask2" onclick="selectTask('task2')" class="py-2 px-3 rounded-lg text-sm font-semibold bg-indigo-600 text-white shadow-sm transition">
+          Writing Task 2 (Essay)
+        </button>
+        <button id="btnTask1" onclick="selectTask('task1')" class="py-2 px-3 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
+          Writing Task 1 (Report)
+        </button>
+      </div>
+
+      <!-- Countdown Timer Bar -->
+      <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">⏱️</span>
+          <div>
+            <p class="text-[11px] text-slate-500 font-medium bn">পরীক্ষার সময় (Timer)</p>
+            <p id="timerDisplay" class="text-xl font-bold font-mono text-indigo-700 leading-none">40:00</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="timerToggleBtn" onclick="toggleTimer()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition bn">
+            ▶ শুরু করুন
+          </button>
+          <button onclick="resetTimer()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold px-3 py-2 rounded-lg transition bn">
+            রিসেট
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question Box & Sample Answer Generator -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+      <div class="flex justify-between items-center">
+        <span id="taskBadge" class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-md">Task 2 • Min 250 Words</span>
+        <button onclick="generateNewQuestion()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bn">
+          🔄 নতুন প্রশ্ন নিন
+        </button>
+      </div>
+
+      <textarea id="questionInput" rows="3" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="এখানে প্রশ্ন লিখুন বা 'নতুন প্রশ্ন নিন' বাটনে চাপ দিন...">Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree?</textarea>
+
+      <!-- Band 6.5/7 Sample Answer Button -->
+      <button id="sampleBtn" onclick="generateSampleAnswer()" class="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition bn">
+        ✨ Band 6.5 - 7.0 নমুনা উত্তর দেখুন (Sample Answer)
+      </button>
+
+      <!-- Sample Answer Output Area -->
+      <div id="sampleOutput" class="hidden bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-2.5 text-sm">
+        <div class="flex justify-between items-center border-b border-amber-200 pb-2">
+          <span class="font-bold text-amber-900 bn">📝 আদর্শ নমুনা উত্তর (Band 6.5 - 7.0)</span>
+          <button onclick="document.getElementById('sampleOutput').classList.add('hidden')" class="text-xs text-slate-500 hover:text-slate-800">✕ বন্ধ করুন</button>
+        </div>
+        <div id="sampleText" class="text-slate-800 leading-relaxed whitespace-pre-line text-sm"></div>
+        <div id="sampleBanglaNote" class="bg-white p-2.5 rounded-lg border border-amber-100 text-xs text-slate-700 bn leading-relaxed"></div>
+      </div>
+    </div>
+
+    <!-- User Answer Input (Image or Text) -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+      <div class="flex justify-between items-center">
+        <label class="text-sm font-bold text-slate-800 bn">আপনার উত্তর দিন:</label>
+        <span id="wordCountBadge" class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-md">Words: 0 / 250</span>
+      </div>
+
+      <!-- Image Upload Box -->
+      <div class="border-2 border-dashed border-slate-300 rounded-xl p-3 text-center bg-slate-50">
+        <p class="text-xs font-semibold text-slate-700 bn">📸 খাতায় লেখা উত্তরের ছবি দিন</p>
+        <p class="text-[11px] text-slate-500 mb-2.5 bn">লাইভ ক্যামেরায় ছবি তুলুন অথবা গ্যালারি থেকে বেছে নিন</p>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bn">
+            📷 ক্যামেরা খুলুন
+            <input type="file" accept="image/*" capture="environment" onchange="handleImageUpload(event)" class="hidden" />
+          </label>
+          <label class="cursor-pointer bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 bn">
+            🖼️ গ্যালারি থেকে নিন
+            <input type="file" accept="image/*" onchange="handleImageUpload(event)" class="hidden" />
+          </label>
+        </div>
+
+        <!-- Image Preview -->
+        <div id="imagePreviewContainer" class="hidden mt-3 relative">
+          <img id="imagePreview" class="max-h-48 mx-auto rounded-lg border border-slate-300 shadow-sm" />
+          <button onclick="removeImage()" class="mt-2 bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 rounded-md bn">✕ ছবি বাদ দিন</button>
+        </div>
+      </div>
+
+      <div class="text-center text-xs text-slate-400 bn">— অথবা নিচে টাইপ করে লিখুন —</div>
+
+      <textarea id="answerInput" rows="7" oninput="updateWordCount()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="এখানে আপনার ইংরেজি রচনাটি লিখুন..."></textarea>
+
+      <button id="evaluateBtn" onclick="evaluateWriting()" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm sm:text-base bn">
+        ✨ ব্যান্ড স্কোর ও মূল্যায়ন দেখুন
+      </button>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingBox" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center space-y-2">
+      <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <p class="text-sm font-bold text-slate-800 bn">এআই পরীক্ষক লেখাটি মূল্যায়ন করছেন...</p>
+      <p class="text-xs text-slate-500 bn">অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন</p>
+    </div>
+
+    <!-- Evaluation Result Section -->
+    <div id="resultSection" class="hidden space-y-3">
+      <!-- Overall Band Card -->
+      <div class="bg-gradient-to-r from-indigo-700 to-blue-600 text-white p-4 rounded-2xl shadow-md flex justify-between items-center">
+        <div>
+          <p class="text-[11px] uppercase tracking-wider text-blue-200 font-semibold">ESTIMATED BAND SCORE</p>
+          <h2 class="text-lg font-bold bn">আপনার সম্ভাব্য স্কোর</h2>
+          <p id="modelUsedText" class="text-[11px] text-blue-200 mt-0.5">AI Examiner Evaluated</p>
+        </div>
+        <div class="bg-white text-indigo-800 px-4 py-2.5 rounded-xl text-center shadow">
+          <span id="overallScore" class="text-2xl font-extrabold block leading-none">6.5</span>
+          <span class="text-[10px] font-bold tracking-wider uppercase">BAND</span>
+        </div>
+      </div>
+
+      <!-- 4 Criteria Sub-scores -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">Task Response</p>
+          <p id="trScore" class="text-lg font-bold text-indigo-700">6.5</p>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">Coherence & Cohesion</p>
+          <p id="ccScore" class="text-lg font-bold text-indigo-700">6.5</p>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">Lexical Resource</p>
+          <p id="lrScore" class="text-lg font-bold text-indigo-700">6.5</p>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">Grammar Accuracy</p>
+          <p id="graScore" class="text-lg font-bold text-indigo-700">6.5</p>
+        </div>
+      </div>
+
+      <!-- Extracted Text (if image) -->
+      <div id="extractedBox" class="hidden bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5">
+        <h3 class="text-xs font-bold text-slate-700 bn">📄 খাতা থেকে এআই যা পড়েছে (Extracted Text):</h3>
+        <p id="extractedText" class="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg whitespace-pre-line leading-relaxed"></p>
+      </div>
+
+      <!-- Detailed Feedback Cards -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <h3 class="text-sm font-bold text-emerald-700 bn">✅ সবল দিক ও ভালো দিকসমূহ (Strengths)</h3>
+        <ul id="strengthsList" class="list-disc list-inside text-xs sm:text-sm text-slate-700 space-y-1 bn"></ul>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <h3 class="text-sm font-bold text-rose-700 bn">⚠️ দুর্বলতা ও ভুল সংশোধন (Weaknesses & Corrections)</h3>
+        <ul id="weaknessesList" class="list-disc list-inside text-xs sm:text-sm text-slate-700 space-y-1.5 bn"></ul>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <h3 class="text-sm font-bold text-indigo-700 bn">💡 উন্নতির উপায় ও পরামর্শ (Suggestions)</h3>
+        <ul id="suggestionsList" class="list-disc list-inside text-xs sm:text-sm text-slate-700 space-y-1 bn"></ul>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <h3 class="text-sm font-bold text-slate-800 bn">📝 বিস্তারিত বাংলা মূল্যায়ন (Detailed Feedback)</h3>
+        <p id="detailedFeedback" class="text-xs sm:text-sm text-slate-700 leading-relaxed bn"></p>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let currentTask = 'task2';
+    let base64Image = null;
+    let timerSeconds = 40 * 60;
+    let timerInterval = null;
+    let isTimerRunning = false;
+
+    const sampleQuestions = {
+      task2: [
+        "Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree?",
+        "Some people think that university education should prepare students for employment, while others believe it has other functions. Discuss both views and give your own opinion.",
+        "In many countries, the amount of crime is increasing. What do you think are the main causes of crime, and how can we deal with those causes?",
+        "Nowadays, more people are choosing to live alone in big cities. Is this a positive or negative development?"
+      ],
+      task1: [
+        "The chart below shows the percentage of households in owned and rented accommodation in England and Wales between 1918 and 2011. Summarise the information by selecting and reporting the main features.",
+        "You recently bought a piece of equipment for your kitchen, but it did not work. You phoned the shop, but no action was taken. Write a letter to the shop manager.",
+        "The diagram below shows the process by which bricks are manufactured for the building industry. Summarise the information by selecting and reporting the main features."
+      ]
+    };
+
+    // Timer Functions
+    function updateTimerDisplay() {
+      const mins = Math.floor(timerSeconds / 60);
+      const secs = timerSeconds % 60;
+      const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      const el = document.getElementById('timerDisplay');
+      el.textContent = display;
+      if (timerSeconds <= 300) {
+        el.classList.remove('text-indigo-700');
+        el.classList.add('text-rose-600');
+      } else {
+        el.classList.remove('text-rose-600');
+        el.classList.add('text-indigo-700');
+      }
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: "Server API Key is not configured." })
-        };
+    function toggleTimer() {
+      const btn = document.getElementById('timerToggleBtn');
+      if (isTimerRunning) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        btn.textContent = '▶ চালু করুন';
+        btn.classList.replace('bg-amber-600', 'bg-emerald-600');
+      } else {
+        isTimerRunning = true;
+        btn.textContent = '⏸ বিরতি (Pause)';
+        btn.classList.replace('bg-emerald-600', 'bg-amber-600');
+        timerInterval = setInterval(() => {
+          if (timerSeconds > 0) {
+            timerSeconds--;
+            updateTimerDisplay();
+          } else {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            btn.textContent = '▶ শুরু করুন';
+            alert('⏰ সময় শেষ! আপনার নির্ধারিত ৪০ মিনিট পূর্ণ হয়েছে।');
+          }
+        }, 1000);
+      }
     }
 
-    try {
-        const { parts } = JSON.parse(event.body);
-        const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
-        let resultData = null;
-        let lastError = "";
-
-        for (const modelName of models) {
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ parts: parts }],
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            maxOutputTokens: 1200
-                        }
-                    })
-                }
-            );
-
-            const data = await response.json();
-            if (data.error) {
-                lastError = data.error.message;
-                continue;
-            }
-
-            resultData = {
-                text: data.candidates[0].content.parts[0].text,
-                model: modelName
-            };
-            break;
-        }
-
-        if (resultData) {
-            return {
-                statusCode: 200,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(resultData)
-            };
-        } else {
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: lastError || "AI evaluation failed." })
-            };
-        }
-    } catch (error) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message })
-        };
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      timerSeconds = currentTask === 'task2' ? 40 * 60 : 20 * 60;
+      updateTimerDisplay();
+      const btn = document.getElementById('timerToggleBtn');
+      btn.textContent = '▶ শুরু করুন';
+      btn.classList.remove('bg-amber-600');
+      btn.classList.add('bg-emerald-600');
     }
-};
+
+    // Task Switcher
+    function selectTask(task) {
+      currentTask = task;
+      const btn2 = document.getElementById('btnTask2');
+      const btn1 = document.getElementById('btnTask1');
+      const badge = document.getElementById('taskBadge');
+
+      if (task === 'task2') {
+        btn2.className = "py-2 px-3 rounded-lg text-sm font-semibold bg-indigo-600 text-white shadow-sm transition";
+        btn1.className = "py-2 px-3 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition";
+        badge.textContent = "Task 2 • Min 250 Words";
+      } else {
+        btn1.className = "py-2 px-3
