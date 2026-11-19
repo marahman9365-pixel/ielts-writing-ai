@@ -13,7 +13,7 @@ exports.handler = async function (event) {
 
     try {
         const { parts } = JSON.parse(event.body);
-        const models = ["gemini-3.8-flash", "gemini-2.5-flash"];
+        const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
         let resultData = null;
         let lastError = "";
 
