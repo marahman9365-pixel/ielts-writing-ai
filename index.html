@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IELTS Writing AI Evaluator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: #f0f2f5;
+            color: #1f2937;
+            padding-bottom: 40px;
+        }
+        header {
+            background: linear-gradient(135deg, #4338ca, #3b82f6);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        header h1 { font-size: 19px; font-weight: 700; }
+        header p { font-size: 12px; color: #dbeafe; margin-top: 2px; }
+        .pro-badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .container {
+            max-width: 600px;
+            margin: 16px auto;
+            padding: 0 14px;
+        }
+        .tab-group {
+            display: flex;
+            background: white;
+            padding: 5px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 16px;
+            gap: 6px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            background: transparent;
+            color: #4b5563;
+            transition: 0.2s;
+        }
+        .tab-btn.active { background: #4338ca; color: white; }
+        .card {
+            background: white;
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            margin-bottom: 16px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .badge {
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+        .new-q-btn {
+            background: none;
+            border: none;
+            color: #4338ca;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        textarea {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            background: #f9fafb;
+            color: #111827;
+            resize: vertical;
+        }
+        textarea:focus { outline: none; border-color: #4338ca; background: white; }
+        .word-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .word-badge.complete { background: #d1fae5; color: #065f46; }
+
+        .upload-zone {
+            border: 2px dashed #a5b4fc;
+            background: #eef2ff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .upload-btn-group {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .scan-btn {
+            background: #4338ca;
+            color: white;
+            border: none;
+            padding: 9px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .scan-btn.secondary {
+            background: white;
+            color: #4338ca;
+            border: 1px solid #4338ca;
+        }
+        .preview-container {
+            position: relative;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #d1d5db;
+        }
+        .preview-container img {
+            width: 100%;
+            max-height: 240px;
+            object-fit: contain;
+            background: #111827;
+            display: block;
+        }
+        .remove-img-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .divider-text {
+            text-align: center;
+            font-size: 11px;
+            color: #6b7280;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        .camera-modal {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .camera-modal video {
+            width: 100%;
+            height: 80vh;
+            object-fit: cover;
+        }
+        .camera-controls {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 16px;
+            background: #111827;
+        }
+        .capture-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .close-cam-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: #4338ca;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            margin-top: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(67, 56, 202, 0.3);
+        }
+        .submit-btn:disabled { background: #9ca3af; }
+        .hidden { display: none !important; }
+        .loading-box { text-align: center; padding: 24px; }
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #e0e7ff;
+            border-top: 4px solid #4338ca;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .score-banner {
+            background: linear-gradient(135deg, #4338ca, #2563eb);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .score-box {
+            background: white;
+            color: #4338ca;
+            width: 72px;
+            height: 72px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+        .score-box span:first-child { font-size: 26px; line-height: 1; }
+        .score-box span:last-child { font-size: 10px; color: #6b7280; margin-top: 4px; }
+        
+        .grid-4 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .mini-card {
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .mini-card p:first-child { font-size: 11px; color: #6b7280; }
+        .mini-card p:last-child { font-size: 18px; font-weight: 700; color: #4338ca; margin-top: 2px; }
+
+        .improved-card {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            padding: 16px;
+            border-radius: 16px;
+            color: #065f46;
+            margin-top: 14px;
+        }
+        .transcribed-card {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 14px;
+            border-radius: 14px;
+            margin-bottom: 14px;
+        }
+        .feedback-text {
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-line;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>IELTS Writing AI</h1>
+            <p>হ্যান্ডরাইটিং স্ক্যানার ও বাংলা মূল্যায়ন</p>
+        </div>
+        <span class="pro-badge">AI Examiner</span>
+    </header>
+
+    <div class="container">
+        <div class="tab-group">
+            <button id="btnTask2" class="tab-btn active" onclick="selectTask('Task 2')">Writing Task 2 (Essay)</button>
+            <button id="btnTask1" class="tab-btn" onclick="selectTask('Task 1')">Writing Task 1 (Report)</button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span id="taskBadge" class="badge">Task 2 • Min 250 Words</span>
+                <button class="new-q-btn" onclick="generateRandomTopic()">🔄 নতুন প্রশ্ন নিন</button>
+            </div>
+            <textarea id="questionInput" rows="3">Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree?</textarea>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <strong style="font-size: 13px;">আপনার উত্তর দিন:</strong>
+                <span id="wordCountBadge" class="word-badge">Words: 0 / 250</span>
+            </div>
+
+            <div id="uploadZone" class="upload-zone">
+                <p style="font-size: 13px; font-weight: 700; color: #3730a3;">📸 খাতায় লেখা উত্তরের ছবি দিন</p>
+                <p style="font-size: 11px; color: #4b5563; margin-top: 3px;">লাইভ ক্যামেরায় ছবি তুলুন অথবা গ্যালারি থেকে বেছে নিন</p>
+                <div class="upload-btn-group">
+                    <button type="button" class="scan-btn" onclick="openLiveCamera()">📷 ক্যামেরা খুলুন</button>
+                    <button type="button" class="scan-btn secondary" onclick="document.getElementById('galleryInput').click()">🖼️ গ্যালারি থেকে নিন</button>
+                </div>
+                <input type="file" id="galleryInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            </div>
+
+            <div id="imagePreviewBox" class="preview-container hidden">
+                <img id="previewImg" src="" alt="Handwritten Essay">
+                <button type="button" class="remove-img-btn" onclick="removeImage()">✕ ছবি বাদ দিন</button>
+            </div>
+
+            <div class="divider-text">— অথবা নিচে টাইপ করে লিখুন —</div>
+
+            <textarea id="essayInput" rows="7" oninput="updateWordCount()" placeholder="Start typing your essay here..."></textarea>
+            <button id="evaluateBtn" class="submit-btn" onclick="evaluateEssay()">✨ ব্যান্ড স্কোর ও মূল্যায়ন দেখুন</button>
+        </div>
+
+        <div id="loadingBox" class="card loading-box hidden">
+            <div class="spinner"></div>
+            <p id="loadingText" style="font-size: 14px; font-weight: 600; color: #4b5563;">এআই পরীক্ষক আপনার লেখাটি মূল্যায়ন করছেন...</p>
+            <p style="font-size: 11px; color: #6b7280; margin-top: 6px;">অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন</p>
+        </div>
+
+        <div id="resultSection" class="hidden">
+            <div class="score-banner">
+                <div>
+                    <p style="font-size: 11px; opacity: 0.8; text-transform: uppercase;">Estimated Band Score</p>
+                    <h2 style="font-size: 20px; margin: 4px 0;">আপনার সম্ভাব্য স্কোর</h2>
+                    <p id="usedModelTag" style="font-size: 11px; opacity: 0.9;">নিচে বিস্তারিত বিশ্লেষণ দেওয়া হলো</p>
+                </div>
+                <div class="score-box">
+                    <span id="overallBand">6.5</span>
+                    <span>BAND</span>
+                </div>
+            </div>
+
+            <div class="grid-4">
+                <div class="mini-card">
+                    <p>Task Response</p>
+                    <p id="trScore">6.5</p>
+                </div>
+                <div class="mini-card">
+                    <p>Coherence & Cohesion</p>
+                    <p id="ccScore">6.5</p>
+                </div>
+                <div class="mini-card">
+                    <p>Lexical Resource</p>
+                    <p id="lrScore">6.0</p>
+                </div>
+                <div class="mini-card">
+                    <p>Grammar Accuracy</p>
+                    <p id="graScore">6.5</p>
+                </div>
+            </div>
+
+            <div id="transcribedSection" class="transcribed-card hidden">
+                <h3 style="font-size: 13px; color: #334155;">📄 খাতা থেকে এআই যা পড়েছে (Extracted Text):</h3>
+                <p id="transcribedText" class="feedback-text" style="font-size: 13px; color: #475569;"></p>
+            </div>
+
+            <div class="card">
+                <h3 style="font-size: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">📝 পরীক্ষকের পরামর্শ ও ভুল সংশোধন:</h3>
+                <div id="feedbackContent" class="feedback-text"></div>
+            </div>
+
+            <div class="improved-card">
+                <h3 style="font-size: 15px;">🌟 উন্নত সংস্করণ (Band 7.5+ মানের):</h3>
+                <p id="improvedVersion" class="feedback-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="cameraModal" class="camera-modal hidden">
+        <video id="cameraVideo" autoplay playsinline></video>
+        <div class="camera-controls">
+            <button type="button" class="close-cam-btn" onclick="closeLiveCamera()">✕ বন্ধ করুন</button>
+            <button type="button" class="capture-btn" onclick="capturePhoto()">📸 ছবি তুলুন</button>
+        </div>
+    </div>
+
+    <script>
+        let currentTask = 'Task 2';
+        let minWords = 250;
+        let uploadedImageBase64 = null;
+        let uploadedImageMime = null;
+        let cameraStream = null;
+
+        const sampleQuestions = {
+            'Task 2': [
+                "Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree?",
+                "Some people think that universities should provide graduates with the knowledge and skills needed in the workplace. Others think that the true function of a university should be to give access to knowledge for its own sake. Discuss both views and give your own opinion.",
+                "In many countries, the amount of crime is increasing. What do you think are the main causes of crime? How can we deal with those causes?"
+            ],
+            'Task 1': [
+                "The chart below shows the percentage of households in owned and rented accommodation in England and Wales between 1918 and 2011. Summarise the information by selecting and reporting the main features.",
+                "You recently stayed at a hotel and left an important document in your room. Write a letter to the hotel manager explaining the situation and asking them to send it to you."
+            ]
+        };
+
+        function selectTask(task) {
+            currentTask = task;
+            minWords = task === 'Task 2' ? 250 : 150;
+            
+            document.getElementById('btnTask2').className = task === 'Task 2' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('btnTask1').className = task === 'Task 1' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('taskBadge').innerText = task + ' • Min ' + minWords + ' Words';
+            
+            generateRandomTopic();
+            updateWordCount();
+        }
+
+        function generateRandomTopic() {
+            const list = sampleQuestions[currentTask];
+            const randomQ = list[Math.floor(Math.random() * list.length)];
+            document.getElementById('questionInput').value = randomQ;
+        }
+
+        function updateWordCount() {
+            const text = document.getElementById('essayInput').value.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            const badge = document.getElementById('wordCountBadge');
+            
+            if (uploadedImageBase64) {
+                badge.innerText = 'Image Attached ✓';
+                badge.classList.add('complete');
+                return;
+            }
+
+            badge.innerText = 'Words: ' + words + ' / ' + minWords;
+            if (words >= minWords) {
+                badge.classList.add('complete');
+            } else {
+                badge.classList.remove('complete');
+            }
+        }
+
+        async function openLiveCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" } },
+                    audio: false
+                });
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = cameraStream;
+                document.getElementById('cameraModal').classList.remove('hidden');
+            } catch (err) {
+                alert('ক্যামেরা চালু করতে ব্রাউজারের Camera পারমিশন Allow করুন অথবা গ্যালারি থেকে ছবি দিন।');
+            }
+        }
+
+        function closeLiveCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            document.getElementById('cameraModal').classList.add('hidden');
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.createElement('canvas');
+            const maxDim = 1200;
+            let width = video.videoWidth;
+            let height = video.videoHeight;
+
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            uploadedImageBase64 = compressedDataUrl.split(',')[1];
+            uploadedImageMime = 'image/jpeg';
+
+            document.getElementById('previewImg').src = compressedDataUrl;
+            document.getElementById('imagePreviewBox').classList.remove('hidden');
+            document.getElementById('uploadZone').classList.add('hidden');
+            updateWordCount();
+            closeLiveCamera();
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 1200;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    uploadedImageBase64 = compressedDataUrl.split(',')[1];
+                    uploadedImageMime = 'image/jpeg';
+
+                    document.getElementById('previewImg').src = compressedDataUrl;
+                    document.getElementById('imagePreviewBox').classList.remove('hidden');
+                    document.getElementById('uploadZone').classList.add('hidden');
+                    updateWordCount();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            uploadedImageBase64 = null;
+            uploadedImageMime = null;
+            document.getElementById('galleryInput').value = '';
+            document.getElementById('imagePreviewBox').classList.add('hidden');
+            document.getElementById('uploadZone').classList.remove('hidden');
+            updateWordCount();
+        }
+
+        async function evaluateEssay() {
+            const question = document.getElementById('questionInput').value.trim();
+            const essay = document.getElementById('essayInput').value.trim();
+
+            if (!uploadedImageBase64 && essay.split(/\s+/).length < 20) {
+                alert('মূল্যায়নের জন্য খাতার ছবি আপলোড করুন অথবা অন্তত ২০টি শব্দ লিখুন।');
+                return;
+            }
+
+            document.getElementById('evaluateBtn').disabled = true;
+            document.getElementById('loadingBox').classList.remove('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('loadingText').innerText = uploadedImageBase64 ? 'হাতের লেখা স্ক্যান ও মূল্যায়ন চলছে...' : 'এআই পরীক্ষক লেখাটি মূল্যায়ন করছেন...';
+
+            const parts = [];
+            let promptText = '';
+
+            if (uploadedImageBase64) {
+                promptText = `You are a certified IELTS Writing Examiner. First, accurately transcribe the handwritten essay from the attached image. Then evaluate this ${currentTask} response strictly based on official IELTS band descriptors.
+Question: "${question}"
+
+Respond ONLY in valid JSON with these exact keys:
+{
+  "transcribedText": "Exact text transcribed from the handwritten image",
+  "overallBand": "6.5",
+  "taskResponse": "6.5",
+  "coherenceCohesion": "6.5",
+  "lexicalResource": "6.0",
+  "grammaticalRange": "6.5",
+  "banglaFeedback": "Short, clear feedback in Bengali (strengths, key grammar/spelling mistakes found in the handwriting with corrections, and vocabulary tips).",
+  "improvedEssay": "A concise Band 7.5+ improved version of the essay."
+}`;
+                parts.push({ text: promptText });
+                parts.push({
+                    inlineData: {
+                        mimeType: uploadedImageMime,
+                        data: uploadedImageBase64
+                    }
+                });
+            } else {
+                promptText = `You are a certified IELTS Writing Examiner. Evaluate this ${currentTask} response strictly.
+Question: "${question}"
+Response: "${essay}"
+
+Respond ONLY in valid JSON with these exact keys:
+{
+  "transcribedText": "",
+  "overallBand": "6.5",
+  "taskResponse": "6.5",
+  "coherenceCohesion": "6.5",
+  "lexicalResource": "6.0",
+  "grammaticalRange": "6.5",
+  "banglaFeedback": "Short, clear feedback in Bengali (strengths, key grammar mistakes with corrections, vocabulary tips).",
+  "improvedEssay": "A concise Band 7.5+ improved version of the essay."
+}`;
+                parts.push({ text: promptText });
+            }
+
+            try {
+                // গোপন Netlify Serverless Function-এ কল পাঠানো হচ্ছে
+                const response = await fetch('/.netlify/functions/evaluate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parts: parts })
+                });
+
+                const data = await response.json();
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Server error');
+                }
+
+                let resultText = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const result = JSON.parse(resultText);
+
+                document.getElementById('overallBand').innerText = result.overallBand;
+                document.getElementById('trScore').innerText = result.taskResponse;
+                document.getElementById('ccScore').innerText = result.coherenceCohesion;
+                document.getElementById('lrScore').innerText = result.lexicalResource;
+                document.getElementById('graScore').innerText = result.grammaticalRange;
+                document.getElementById('feedbackContent').innerText = result.banglaFeedback;
+                document.getElementById('improvedVersion').innerText = result.improvedEssay;
+                document.getElementById('usedModelTag').innerText = 'মডেল: ' + (data.model || 'Gemini AI');
+
+                if (uploadedImageBase64 && result.transcribedText) {
+                    document.getElementById('transcribedText').innerText = result.transcribedText;
+                    document.getElementById('transcribedSection').classList.remove('hidden');
+                } else {
+                    document.getElementById('transcribedSection').classList.add('hidden');
+                }
+
+                document.getElementById('resultSection').classList.remove('hidden');
+                document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                alert('দুঃখিত, মূল্যায়নে সমস্যা হয়েছে: ' + err.message);
+            } finally {
+                document.getElementById('evaluateBtn').disabled = false;
+                document.getElementById('loadingBox').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
